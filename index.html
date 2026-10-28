@@ -115,11 +115,12 @@ function addShipmentItem(sku="",qty=1){
 function updateShipmentSummary(){const rows=[...document.querySelectorAll("#shipmentItems .shipment-item")];const units=rows.reduce((n,r)=>n+Math.max(1,Number(r.querySelector('input[type="number"]').value)||1),0);document.getElementById("shipmentSummary").textContent=rows.length+" SKU · "+units+" barang";}
 async function showShipment(code,qty=1){
  const shipments=await all("shipments");const old=shipments.find(x=>String(x.tracking).toUpperCase()===code.toUpperCase());
- if(old){document.getElementById("message").textContent="⚠️ RESI SUDAH TERCATAT: "+code+" ("+old.status+"). Tidak ditambahkan ulang.";const alertBox=document.getElementById("cameraAlert");alertBox.style.display="block";document.getElementById("cameraAlertTitle").textContent="⚠️ RESI SUDAH TERCATAT";document.getElementById("cameraAlertCode").textContent=code;document.getElementById("cameraAlertStatus").textContent=String(old.status||"Sudah tersimpan").toUpperCase()+" — JANGAN SCAN ULANG";document.getElementById("cameraHint").textContent="Resi ini sudah ada di daftar. Ambil resi berikutnya.";cameraBusy=false;if(cameraStream){cameraScanMode=true;cameraScanTick()}return}
+ if(old){document.getElementById("message").textContent="⚠️ RESI SUDAH TERCATAT: "+code+" ("+old.status+"). Tidak ditambahkan ulang.";const alertBox=document.getElementById("cameraAlert");alertBox.style.display="block";document.getElementById("cameraAlertTitle").textContent="⚠️ RESI SUDAH TERCATAT";document.getElementById("cameraAlertCode").textContent=code;document.getElementById("cameraAlertStatus").textContent=String(old.status||"Sudah tersimpan").toUpperCase()+" — JANGAN SCAN ULANG";document.getElementById("cameraHint").textContent="Resi ini sudah ada di daftar. Ambil resi berikutnya.";cameraBusy=false;return true}
  const alertBox=document.getElementById("cameraAlert");if(alertBox)alertBox.style.display="none";pendingTracking=code;pendingQty=qty;document.getElementById("trackingInput").value=code;document.getElementById("shipmentItems").innerHTML="";addShipmentItem("",qty);
  document.getElementById("shipmentPanel").classList.remove("hidden");
  document.getElementById("message").textContent="Pilih semua SKU dalam resi ini. Resi yang sama hanya dicatat sekali.";
  document.getElementById("shipmentPanel").scrollIntoView({behavior:"smooth",block:"nearest"});
+ return false;
 }
 async function saveShipment(status){
  const tracking=pendingTracking;if(!tracking)return;
@@ -216,7 +217,7 @@ async function startCameraScanner(mode="resi"){
        if(cameraScanMode){
         const normalized=code.toUpperCase(),p=products.find(x=>String(x.sku).toUpperCase()===normalized);
         if(p){document.getElementById("skuInput").value=code;document.getElementById("message").textContent="Barcode terbaca sebagai SKU, bukan resi. Scan barcode resi atau masukkan nomor resi.";cameraBusy=false}
-        else{await showShipment(code,1);cameraBusy=true;hint.textContent="Resi terbaca. Lengkapi SKU lalu tekan Kirim sekarang. Setelah disimpan, kamera siap untuk resi berikutnya.";return}
+        else{const duplicate=await showShipment(code,1);if(duplicate){cameraBusy=false;hint.textContent="Resi sudah tercatat. Peringatan ditampilkan; kamera tetap aktif, silakan scan resi berikutnya.";cameraTimer=setTimeout(cameraScanTick,250);return}cameraBusy=true;hint.textContent="Resi terbaca. Lengkapi SKU lalu tekan Kirim sekarang. Setelah disimpan, kamera siap untuk resi berikutnya.";return}
        }else{document.getElementById("skuInput").value=code;await document.getElementById("scanForm").requestSubmit();cameraBusy=false}
        if(cameraStream){hint.textContent="Siap scan resi berikutnya. Arahkan ke barcode resi.";cameraTimer=setTimeout(cameraScanTick,700)}
        return;
